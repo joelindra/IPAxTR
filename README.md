@@ -46,58 +46,58 @@ An interactive CLI and automated binary pipeline engineered from scratch in pure
 
 ```mermaid
 flowchart TD
-    subgraph S1["1. PRE-FLIGHT & DEVICE DISCOVERY"]
+    subgraph S1["1. PRE-FLIGHT and DEVICE DISCOVERY"]
         USB["Connected iPhone (USB)"] --> MUX["usbmuxd Driver Interface"]
         MUX --> DEV_QUERY["Query Lockdown Service Registry"]
-        DEV_QUERY --> JB_PROBE{"Probe Jailbreak State<br/>(Frida root UID 0 & /var/jb)"}
+        DEV_QUERY --> JB_PROBE{"Probe Jailbreak State<br/>Frida root UID 0 and /var/jb"}
         JB_PROBE -->|Verified| JB_READY["Jailbreak Status: READY"]
-        JB_PROBE -->|Failed| JB_NOT_READY["Jailbreak Status: NOT READY<br/>(Limited to App Data Sandbox)"]
+        JB_PROBE -->|Failed| JB_NOT_READY["Jailbreak Status: NOT READY<br/>Limited to App Data Sandbox"]
     end
 
-    subgraph S2["2. APPLICATION INDEXING & INTERACTION"]
+    subgraph S2["2. APPLICATION INDEXING and INTERACTION"]
         JB_READY --> PROXY["Query MobileInstallation Proxy"]
-        PROXY --> CATEGORIZE["Classification Engine<br/>(User / Apple Removable / Jailbreak / System)"]
+        PROXY --> CATEGORIZE["Classification Engine<br/>User / Apple Removable / Jailbreak / System"]
         CATEGORIZE --> MAIN_UI["Interactive TUI Engine (main.py)"]
         MAIN_UI --> ACTION_SELECT{"Select Action Menu"}
     end
 
     subgraph S3["3. BUNDLE EXTRACTION PIPELINE"]
-        ACTION_SELECT -->|"Action [1]: Standard IPA"| PULL_BRIDGE["Recursive Pull via Frida Root Bridge"]
-        PULL_BRIDGE --> SIDECAR["Generate POSIX Metadata Sidecar<br/>(Symlinks, UNIX permissions, 0o755 exec bits)"]
+        ACTION_SELECT -->|"Action 1: Standard IPA"| PULL_BRIDGE["Recursive Pull via Frida Root Bridge"]
+        PULL_BRIDGE --> SIDECAR["Generate POSIX Metadata Sidecar<br/>Symlinks, UNIX permissions, 0o755 exec bits"]
         SIDECAR --> LOCAL_STAGING["Local Staging Directory: work/AppName.app"]
     end
 
     subgraph S4["4. FAIRPLAY RUNTIME DECRYPTION ENGINE (decrypt.py)"]
-        ACTION_SELECT -->|"Action [2]: Decrypt IPA / Action [3]: Ghidra Prep"| CHECK_STAGING{"Bundle Staged in work/?"}
+        ACTION_SELECT -->|"Action 2/3: Decrypt or Ghidra Prep"| CHECK_STAGING{"Bundle Staged in work?"}
         CHECK_STAGING -->|No| PULL_BRIDGE
-        CHECK_STAGING -->|Yes| SCAN_MACHOS["Scan Mach-O Binaries<br/>(Main Binary, Frameworks, Extensions)"]
+        CHECK_STAGING -->|Yes| SCAN_MACHOS["Scan Mach-O Binaries<br/>Main Binary, Frameworks, Extensions"]
         SCAN_MACHOS --> SPAWN["Spawn Target App via Frida Engine"]
         SPAWN --> KERNEL_PAGING["iOS Kernel Faults Decrypted Pages into RAM"]
-        KERNEL_PAGING --> PAGE_DIFF["Diff Memory __TEXT Segments vs Disk<br/>(Overwrite differing encrypted pages on disk)"]
-        PAGE_DIFF --> EXT_CHECK{"Unloaded Extensions<br/>in PlugIns/*.appex?"}
-        EXT_CHECK -->|Strip (Recommended)| STRIP_APPEX["Prune .appex (Clean Sideloading)"]
-        EXT_CHECK -->|Patch| PATCH_APPEX["Patch cryptid=0 on .appex disk headers"]
-        EXT_CHECK -->|Keep| KEEP_APPEX["Retain original encrypted .appex"]
+        KERNEL_PAGING --> PAGE_DIFF["Diff Memory TEXT Segments vs Disk<br/>Overwrite differing encrypted pages on disk"]
+        PAGE_DIFF --> EXT_CHECK{"Unloaded Extensions in PlugIns?"}
+        EXT_CHECK -->|Strip Recommended| STRIP_APPEX["Prune appex (Clean Sideloading)"]
+        EXT_CHECK -->|Patch| PATCH_APPEX["Patch cryptid=0 on appex disk headers"]
+        EXT_CHECK -->|Keep| KEEP_APPEX["Retain original encrypted appex"]
         STRIP_APPEX --> PATCH_CRYPTID["Patch Mach-O LC_ENCRYPTION_INFO_64 Header<br/>cryptid = 0"]
         PATCH_APPEX --> PATCH_CRYPTID
         KEEP_APPEX --> PATCH_CRYPTID
     end
 
-    subgraph S5["5. PACKAGING & ARTIFACT EXPORT"]
+    subgraph S5["5. PACKAGING and ARTIFACT EXPORT"]
         PATCH_CRYPTID --> TARGET_FORMAT{"Target Deliverable"}
-        TARGET_FORMAT -->|"Package .ipa"| REPACK["packaging.py:<br/>Reconstruct Zip Payload/AppName.app<br/>Replay symlinks & 0o755 permissions"]
+        TARGET_FORMAT -->|"Package IPA"| REPACK["packaging.py: Reconstruct Zip Payload<br/>Replay symlinks and 0o755 permissions"]
         REPACK --> OUT_IPA["Generated Archive: ipas/AppName.ipa"]
-        
-        TARGET_FORMAT -->|"Decompiler Binary"| EXPORT_RAW["main.py export_and_guide_ghidra():<br/>Extract Mach-O Executable from Bundle"]
+
+        TARGET_FORMAT -->|"Decompiler Binary"| EXPORT_RAW["main.py export_and_guide_ghidra:<br/>Extract Mach-O Executable from Bundle"]
         EXPORT_RAW --> VERIFY_HEADER["Verify Mach-O Headers (64-bit arm64, cryptid=0)"]
         VERIFY_HEADER --> OUT_BIN["Exported Binary: binaries/AppName/Executable"]
-        OUT_BIN --> AUTO_EXPLORER["Auto-Launch Windows Explorer (/select)"]
+        OUT_BIN --> AUTO_EXPLORER["Auto-Launch Windows Explorer"]
     end
 
     subgraph S6["6. STATIC REVERSE ENGINEERING (GHIDRA / IDA PRO)"]
-        OUT_BIN -.->|Drag & Drop Mach-O| GHIDRA_IMPORT["Ghidra Project Import"]
-        GHIDRA_IMPORT --> IMPORT_SETTINGS["Format: Mac OS X Mach-O<br/>Language: AARCH64:LE:64:v8A (Apple)"]
-        IMPORT_SETTINGS --> AUTO_ANALYSIS["Run Auto Analysis & Demangler Swift"]
+        OUT_BIN -.->|Drag and Drop Mach-O| GHIDRA_IMPORT["Ghidra Project Import"]
+        GHIDRA_IMPORT --> IMPORT_SETTINGS["Format: Mac OS X Mach-O<br/>Language: AARCH64 LE 64 v8A Apple"]
+        IMPORT_SETTINGS --> AUTO_ANALYSIS["Run Auto Analysis and Demangler Swift"]
         AUTO_ANALYSIS --> DECOMPILED_CODE["Reconstructed C / Swift Pseudocode"]
     end
 
@@ -108,6 +108,7 @@ flowchart TD
     class OUT_IPA,OUT_BIN,DECOMPILED_CODE success;
     class JB_NOT_READY,EXT_CHECK warning;
 ```
+
 
 ---
 
@@ -425,3 +426,7 @@ This toolkit is designed and intended strictly for:
 2. **Defensive Auditing, Vulnerability Assessment & Educational Reverse Engineering**.
 
 > Redistributing copyrighted App Store or TestFlight binaries without authorization violates Apple's Terms of Service and applicable intellectual property laws. Runtime decryption requires explicit user acknowledgment (`--i-own-this-build`).
+
+## Creator
+
+Joel Indra
