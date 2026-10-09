@@ -1,0 +1,82 @@
+================================================================================
+IPAxTR — TECHNICAL WHITEPAPER & ARSENAL DEMONSTRATION OUTLINE
+Black Hat Asia Arsenal 2027 Submission
+================================================================================
+
+1. EXECUTIVE SUMMARY
+--------------------
+IPAxTR is an interactive pure-Python binary extraction, FairPlay memory-diff
+decryption, and decompiler preparation suite for modern iOS security research.
+It operates over USB (usbmuxd) across Windows, macOS, and Linux, specifically 
+addressing modern iOS 16+ demand-paging DRM and rootless jailbreak environments 
+(Dopamine).
+
+Repository URL: [Masukkan URL GitHub Anda disini]
+Target Platform: iOS 14.0 - 16.7+ (Rootless & Rootful)
+Host Compatibility: Windows 10/11, macOS, Linux (Pure Python 3.9+)
+
+
+2. TECHNICAL ARCHITECTURE & INNOVATIONS
+---------------------------------------
+
+A. USB Filesystem Oracle via Frida Root Agent:
+   - Traditional extraction methods require fragile SSH tunnels, network pairing,
+     or deprecated AFC2 daemons.
+   - IPAxTR attaches to frida-server (UID 0) and injects a Darwin C/NativeFunction
+     agent exposing native POSIX primitives (opendir, readdir, lstat, readlink).
+   - Bundles are streamed in 4 MB chunks at sustained ~14 MB/s over USB.
+
+B. Windows POSIX Metadata Sidecar Manifest:
+   - Windows filesystems (NTFS) cannot natively preserve UNIX permissions (0o755)
+     or POSIX symlinks without elevated developer mode privileges.
+   - IPAxTR captures all remote file modes, link targets, and sanitized names in 
+     a JSON manifest (.__ipaxtr_meta__.json).
+   - During repacking, packaging.py replays exact POSIX attributes into the .ipa ZIP.
+
+C. FairPlay Runtime Memory Page-Diffing (Solving iOS 16+ Lazy Decryption):
+   - Background: On iOS 16+, the XNU kernel utilizes demand-paging for FairPlay 
+     DRM. Encrypted pages are faulted into RAM only when executed. Disk Mach-O 
+     headers frequently report a misleading cryptsize of 0x1000 (4 KB / single page),
+     causing legacy dumpers to fail.
+   - Solution: IPAxTR inspects the binary's full __TEXT segment. While the process 
+     runs, it streams memory pages via RPC and performs a 4 KB page-diff against 
+     the staged disk image.
+   - Differing (decrypted) pages in RAM are overwritten back to disk, and load 
+     command LC_ENCRYPTION_INFO_64 is patched to cryptid = 0.
+
+D. Decoupled App Extension (.appex) Resolution:
+   - Modern iOS apps bundle Notification, Widget, and Share plugins in PlugIns/*.appex.
+   - These execute under independent daemon processes (pkd) and remain unmapped in 
+     the main application address space.
+   - IPAxTR provides configurable strategies:
+     * strip (default): Removes un-decrypted extensions to allow clean sideloading 
+       via TrollStore/AltStore without FairPlay entitlement crashes.
+     * patch: Sets cryptid=0 on disk headers.
+     * keep: Retains original state.
+
+E. Seamless Ghidra / IDA Pro Decompiler Pipeline:
+   - Prevents the common pitfall where security analysts import raw .ipa archives 
+     into Ghidra (which causes ZIP bytes to be misclassified as microcontroller code).
+   - Directly extracts the decrypted ARM64 Mach-O executable to binaries/<App>/<Binary>.
+   - Provides verified import architecture (Mac OS X Mach-O / AARCH64:LE:64:v8A) and 
+     automatically highlights the file in the host file explorer for instant drag-and-drop.
+
+
+3. BOOTH DEMONSTRATION PLAN (BLACK HAT ARSENAL)
+-----------------------------------------------
+- Hardware: Physical iPhone running iOS 16 (Dopamine rootless) connected via USB 
+  to a laptop workstation.
+- Duration: 5 - 7 minutes interactive demonstration.
+- Demo Flow:
+  1. Automated USB device discovery & rootless environment check in TUI (main.py).
+  2. Live pulling of a FairPlay-protected target application.
+  3. Real-time execution of the runtime memory page-diffing decryption engine.
+  4. Immediate export and drag-and-drop into Ghidra CodeBrowser with Swift demangling.
+
+
+4. OPEN SOURCE & ETHICAL COMPLIANCE
+-----------------------------------
+- Distributed under an Open-Source License.
+- Designed strictly for authorized vulnerability research, defensive auditing,
+  and reverse engineering education.
+================================================================================
