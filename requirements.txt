@@ -1,0 +1,12 @@
+# Core: usbmux / lockdown / installation_proxy / AFC (all device work)
+pymobiledevice3>=3.0
+
+# SSH/SFTP pulls on jailbroken devices (--method ssh)
+paramiko>=3.4
+
+# FairPlay dump of owned apps on jailbroken devices (optional, `decrypt`)
+# wheel index for Windows/macOS/Linux prebuilds: https://github.com/frida/frida
+frida>=16.0
+
+# Terminal UI formatting
+rich>=13.0
